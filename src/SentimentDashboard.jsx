@@ -14,44 +14,44 @@ const cropImages = {
   Canola: canolaBanner,
 };
 
+const getScoreColor = (score) => {
+  if (score <= 33) return "#e74c3c"; // red
+  if (score >= 66) return "#2ecc71"; // green
+  return "#f1c40f"; // yellow
+};
+
+// ✅ FIXED: clean arc that ends exactly at needle without wrapping
+const describeArc = (x, y, radius, score) => {
+  const clampedScore = Math.max(0, Math.min(score, 100));
+  const angle = (Math.PI * clampedScore) / 100;
+  const xEnd = x + radius * Math.cos(angle - Math.PI);
+  const yEnd = y + radius * Math.sin(angle - Math.PI);
+  const largeArcFlag = clampedScore > 50 ? 1 : 0;
+  return `M${x - radius},${y} A${radius},${radius} 0 ${largeArcFlag},1 ${xEnd},${yEnd}`;
+};
+
+const getGradientColor = (score) => {
+  const r = score < 50 ? 231 : 255 - Math.round((score - 50) * 4.8);
+  const g = score < 50 ? Math.round(score * 4.8) : 223;
+  const b = 200;
+  return `rgba(${r}, ${g}, ${b}, 0.2)`;
+};
+
 const SentimentDashboard = () => {
   const [selectedCrop, setSelectedCrop] = useState("Corn");
+  const [showModal, setShowModal] = useState(false);
 
   const sentimentScore = 64;
   const sentimentLabel =
     sentimentScore >= 66 ? "Bullish" : sentimentScore <= 33 ? "Bearish" : "Neutral";
 
   const components = [
-    {
-      title: "Price Momentum",
-      description: "Tracks recent price movement to measure short-term market direction.",
-      score: 70.7,
-    },
-    {
-      title: "COT Positioning",
-      description: "Based on Commitment of Traders data to gauge trader sentiment.",
-      score: 59.04,
-    },
-    {
-      title: "News Sentiment",
-      description: "Sentiment extracted from recent ag news and headlines.",
-      score: 66.7,
-    },
-    {
-      title: "Weather Impact",
-      description: "Evaluates how current weather conditions may influence yields.",
-      score: 53,
-    },
-    {
-      title: "Export Demand",
-      description: "Represents the strength of foreign demand for U.S. corn.",
-      score: 100,
-    },
-    {
-      title: "Technical Indicators",
-      description: "Includes RSI, moving averages, and other trading signals.",
-      score: 50,
-    },
+    { title: "Price Momentum", description: "Tracks recent price movement to measure short-term market direction.", score: 70.7 },
+    { title: "COT Positioning", description: "Based on Commitment of Traders data to gauge trader sentiment.", score: 59.04 },
+    { title: "News Sentiment", description: "Sentiment extracted from recent ag news and headlines.", score: 66.7 },
+    { title: "Weather Impact", description: "Evaluates how current weather conditions may influence yields.", score: 53 },
+    { title: "Export Demand", description: "Represents the strength of foreign demand for U.S. corn.", score: 100 },
+    { title: "Technical Indicators", description: "Includes RSI, moving averages, and other trading signals.", score: 50 },
   ];
 
   const getLabel = (score) => {
@@ -60,31 +60,10 @@ const SentimentDashboard = () => {
     return "Neutral";
   };
 
-  const getColor = (score) => {
-    if (score >= 66) return "#e6f9f0"; // light green
-    if (score <= 33) return "#fceaea"; // light red
-    return "#fff9e5"; // light yellow
-  };
-
   return (
-    <div
-      style={{
-        fontFamily: "Arial, sans-serif",
-        maxWidth: "1200px",
-        margin: "0 auto",
-        padding: "1rem", // 🔧 tighter top padding
-      }}
-    >
+    <div style={{ fontFamily: "Arial, sans-serif", maxWidth: "1200px", margin: "0 auto", padding: "1rem" }}>
       {/* Banner */}
-      <div
-        style={{
-          width: "100%",
-          height: "260px", // slightly shorter than before
-          overflow: "hidden",
-          borderRadius: "8px",
-          margin: "0",
-        }}
-      >
+      <div style={{ width: "100%", height: "260px", overflow: "hidden", borderRadius: "8px" }}>
         <img
           src={cropImages[selectedCrop]}
           alt={`${selectedCrop} banner`}
@@ -92,50 +71,64 @@ const SentimentDashboard = () => {
         />
       </div>
 
-      {/* Title and Gauge */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "0.5rem",
-        }}
-      >
-        <h1 style={{ fontSize: "1.8rem", fontWeight: "bold" }}>
-          Ag Sentiment Index — April 13, 2025
-        </h1>
+      {/* Flex row: text left, gauge right */}
+      <div style={{
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "2rem",
+        marginTop: "1.25rem",
+        marginBottom: "1.5rem"
+      }}>
+        {/* Left: title + pills + description */}
+        <div style={{ flex: "1 1 60%", minWidth: "300px" }}>
+          <h1 style={{ fontSize: "1.8rem", fontWeight: "bold", marginBottom: "0.75rem" }}>
+            Ag Sentiment Index — April 13, 2025
+          </h1>
 
-        {/* Gauge — slightly wider */}
-        <div style={{ position: "relative", width: 200, height: 140 }}>
-          <svg width="200" height="140">
-            <path
-              d="M20,120 A80,80 0 0,1 180,120"
-              fill="none"
-              stroke="#ddd"
-              strokeWidth="20"
-            />
-            <defs>
-              <linearGradient
-                id="sentimentGradient"
-                x1="0%"
-                y1="100%"
-                x2="100%"
-                y2="0%"
+          <div style={{ marginBottom: "0.75rem" }}>
+            {Object.keys(cropImages).map((crop) => (
+              <button
+                key={crop}
+                onClick={() => setSelectedCrop(crop)}
+                style={{
+                  background: crop === selectedCrop ? "#2d3748" : "#e2e8f0",
+                  color: crop === selectedCrop ? "#fff" : "#2d3748",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  marginRight: "10px",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  fontWeight: "bold",
+                }}
               >
-                <stop offset="0%" stopColor="#e74c3c" />
-                <stop offset="50%" stopColor="#f1c40f" />
-                <stop offset="100%" stopColor="#2ecc71" />
-              </linearGradient>
-            </defs>
+                {crop}
+              </button>
+            ))}
+          </div>
+
+          <p style={{ fontSize: "0.95rem", maxWidth: "600px", color: "#333" }}>
+            The Ag Sentiment Index is a dynamic scoring model designed to reflect current market conditions —
+            including psychology, fundamentals, and technical trends — in U.S. corn production.
+          </p>
+        </div>
+
+        {/* Right: Gauge + Score + Button */}
+        <div style={{ flex: "1 1 35%", minWidth: "240px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <svg width="200" height="140">
+            {/* Gray arc */}
+            <path d="M20,120 A80,80 0 0,1 180,120" fill="none" stroke="#eee" strokeWidth="20" />
+            {/* Score arc */}
             <path
-              d="M20,120 A80,80 0 0,1 180,120"
+              d={describeArc(100, 120, 80, sentimentScore)}
               fill="none"
-              stroke="url(#sentimentGradient)"
+              stroke={getScoreColor(sentimentScore)}
               strokeWidth="20"
               strokeLinecap="round"
-              strokeDasharray="180"
-              strokeDashoffset={180 - sentimentScore * 1.8}
             />
+            {/* Needle */}
             <line
               x1="100"
               y1="120"
@@ -146,95 +139,104 @@ const SentimentDashboard = () => {
             />
             <circle cx="100" cy="120" r="5" fill="#333" />
           </svg>
-          <div
-            style={{ textAlign: "center", marginTop: "4px", fontWeight: "bold" }}
-          >
+
+          <div style={{ fontWeight: "bold", textAlign: "center", marginBottom: "0.25rem" }}>
             {sentimentScore.toFixed(2)} / 100 — {sentimentLabel}
           </div>
+
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              background: "#2d3748",
+              color: "#fff",
+              padding: "10px 20px",
+              fontSize: "1rem",
+              borderRadius: "6px",
+              border: "none",
+              cursor: "pointer",
+              marginTop: "0.5rem"
+            }}
+          >
+            Generate Analysis
+          </button>
         </div>
       </div>
 
-      {/* Crop Selector */}
-      <div style={{ margin: "0.5rem 0 1rem" }}>
-        {Object.keys(cropImages).map((crop) => (
-          <button
-            key={crop}
-            onClick={() => setSelectedCrop(crop)}
-            style={{
-              background: crop === selectedCrop ? "#2d3748" : "#e2e8f0",
-              color: crop === selectedCrop ? "#fff" : "#2d3748",
-              border: "none",
-              padding: "6px 12px",
-              borderRadius: "16px",
-              marginRight: "8px",
-              cursor: "pointer",
-              fontSize: "0.85rem",
-              transition: "background 0.2s ease",
-            }}
-          >
-            {crop}
-          </button>
-        ))}
-      </div>
-
-      {/* Description */}
-      <p
-        style={{
-          fontSize: "0.95rem",
-          maxWidth: "800px",
-          color: "#333",
-          marginBottom: "1.25rem",
-        }}
-      >
-        The Ag Sentiment Index is a dynamic scoring model designed to reflect
-        current market conditions — including psychology, fundamentals, and
-        technical trends — in U.S. corn production.
-      </p>
-
-      {/* Component Grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "1rem",
-        }}
-      >
+      {/* Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
         {components.map((comp) => (
           <div
             key={comp.title}
             style={{
-              border: "1px solid #ddd",
+              backgroundColor: getGradientColor(comp.score),
               borderRadius: "8px",
               padding: "1rem",
-              backgroundColor: getColor(comp.score), // 🔧 color-coded background
               boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
             }}
           >
-            <h3
-              style={{
-                fontSize: "1rem",
-                fontWeight: "bold",
-                marginBottom: "0.5rem",
-              }}
-            >
-              {comp.title}
-            </h3>
-            <p style={{ fontSize: "0.85rem", color: "#555" }}>
-              {comp.description}
-            </p>
-            <p
-              style={{
-                marginTop: "0.75rem",
-                fontSize: "0.9rem",
-                fontWeight: "bold",
-                color: "#222",
-              }}
-            >
+            <h3 style={{ fontSize: "1rem", fontWeight: "bold", marginBottom: "0.5rem" }}>{comp.title}</h3>
+            <p style={{ fontSize: "0.85rem", color: "#555" }}>{comp.description}</p>
+            <p style={{ marginTop: "0.75rem", fontSize: "0.9rem", fontWeight: "bold", color: "#222" }}>
               Score: {comp.score} — {getLabel(comp.score)}
             </p>
           </div>
         ))}
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            height: "100vh",
+            width: "100vw",
+            background: "rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              padding: "2rem",
+              borderRadius: "10px",
+              maxWidth: "600px",
+              width: "90%",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
+            }}
+          >
+            <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Market Sentiment Analysis</h2>
+            <p style={{ fontSize: "0.95rem", marginBottom: "1rem", lineHeight: "1.5" }}>
+              Current conditions suggest a {sentimentLabel.toLowerCase()} outlook with a composite score of {sentimentScore}.
+              Key contributors include {components[0].title} and {components[4].title}, both indicating strong momentum and demand signals.
+            </p>
+            <p style={{ fontSize: "0.95rem", lineHeight: "1.5" }}>
+              With a score {Math.abs(sentimentScore - 70).toFixed(1)} points from the next trade trigger threshold,
+              traders may consider monitoring further shifts in positioning or technical momentum in the coming days.
+            </p>
+            <div style={{ textAlign: "right", marginTop: "1.5rem" }}>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  background: "#2d3748",
+                  color: "#fff",
+                  padding: "8px 16px",
+                  fontSize: "0.9rem",
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
