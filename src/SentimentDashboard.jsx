@@ -30,32 +30,27 @@ const getGradientColor = (score) => {
   return `rgba(${r}, ${g}, ${b}, 0.2)`;
 };
 
+const getLabel = (score) => {
+  if (score >= 66) return "Bullish";
+  if (score <= 33) return "Bearish";
+  return "Neutral";
+};
+
 const SentimentDashboard = () => {
   const [selectedCrop, setSelectedCrop] = useState("Corn");
   const [showModal, setShowModal] = useState(false);
   const [sentimentScore, setSentimentScore] = useState(null);
-
-  const components = [
-    { title: "Price Momentum", description: "Tracks recent price movement to measure short-term market direction.", score: 70.7 },
-    { title: "COT Positioning", description: "Based on Commitment of Traders data to gauge trader sentiment.", score: 59.04 },
-    { title: "News Sentiment", description: "Sentiment extracted from recent ag news and headlines.", score: 66.7 },
-    { title: "Weather Impact", description: "Evaluates how current weather conditions may influence yields.", score: 53 },
-    { title: "Export Demand", description: "Represents the strength of foreign demand for U.S. corn.", score: 100 },
-    { title: "Technical Indicators", description: "Includes RSI, moving averages, and other trading signals.", score: 50 },
-  ];
-
-  const getLabel = (score) => {
-    if (score >= 66) return "Bullish";
-    if (score <= 33) return "Bearish";
-    return "Neutral";
-  };
+  const [componentScores, setComponentScores] = useState({});
 
   useEffect(() => {
     fetch("https://harvestmarkets-api.onrender.com/api/latest-score")
       .then(res => res.json())
       .then(data => {
-        if (data && data.score !== undefined) {
+        if (data?.score !== undefined) {
           setSentimentScore(data.score);
+        }
+        if (data?.scores) {
+          setComponentScores(data.scores);
         }
       })
       .catch(err => console.error("Failed to fetch score:", err));
@@ -72,7 +67,7 @@ const SentimentDashboard = () => {
         />
       </div>
 
-      {/* Flex row */}
+      {/* Header & Gauge */}
       <div style={{
         display: "flex",
         flexWrap: "wrap",
@@ -82,7 +77,7 @@ const SentimentDashboard = () => {
         marginTop: "1.25rem",
         marginBottom: "1.5rem"
       }}>
-        {/* Left */}
+        {/* Left Side */}
         <div style={{ flex: "1 1 60%", minWidth: "300px" }}>
           <h1 style={{ fontSize: "1.8rem", fontWeight: "bold", marginBottom: "0.75rem" }}>
             Ag Sentiment Index
@@ -116,7 +111,7 @@ const SentimentDashboard = () => {
           </p>
         </div>
 
-        {/* Gauge + Button */}
+        {/* Gauge Side */}
         <div style={{ flex: "1 1 35%", minWidth: "240px", display: "flex", flexDirection: "column", alignItems: "center" }}>
           {sentimentScore !== null ? (
             <>
@@ -139,7 +134,6 @@ const SentimentDashboard = () => {
                 />
                 <circle cx="100" cy="120" r="5" fill="#333" />
               </svg>
-
               <div style={{ fontWeight: "bold", textAlign: "center", marginBottom: "0.25rem" }}>
                 {sentimentScore.toFixed(2)} / 100 — {getLabel(sentimentScore)}
               </div>
@@ -166,25 +160,27 @@ const SentimentDashboard = () => {
         </div>
       </div>
 
-      {/* Cards */}
+      {/* Component Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-        {components.map((comp) => (
-          <div
-            key={comp.title}
-            style={{
-              backgroundColor: getGradientColor(comp.score),
-              borderRadius: "8px",
-              padding: "1rem",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-            }}
-          >
-            <h3 style={{ fontSize: "1rem", fontWeight: "bold", marginBottom: "0.5rem" }}>{comp.title}</h3>
-            <p style={{ fontSize: "0.85rem", color: "#555" }}>{comp.description}</p>
-            <p style={{ marginTop: "0.75rem", fontSize: "0.9rem", fontWeight: "bold", color: "#222" }}>
-              Score: {comp.score} — {getLabel(comp.score)}
-            </p>
-          </div>
-        ))}
+        {Object.entries(componentScores).map(([key, value]) => {
+          const title = key.charAt(0).toUpperCase() + key.slice(1);
+          return (
+            <div
+              key={key}
+              style={{
+                backgroundColor: getGradientColor(value),
+                borderRadius: "8px",
+                padding: "1rem",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+              }}
+            >
+              <h3 style={{ fontSize: "1rem", fontWeight: "bold", marginBottom: "0.5rem" }}>{title}</h3>
+              <p style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#222" }}>
+                Score: {value} — {getLabel(value)}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       {/* Modal */}
@@ -215,12 +211,12 @@ const SentimentDashboard = () => {
           >
             <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Market Sentiment Analysis</h2>
             <p style={{ fontSize: "0.95rem", marginBottom: "1rem", lineHeight: "1.5" }}>
-              Current conditions suggest a {getLabel(sentimentScore).toLowerCase()} outlook with a composite score of {sentimentScore}.
-              Key contributors include {components[0].title} and {components[4].title}, both indicating strong momentum and demand signals.
+              Current conditions suggest a {getLabel(sentimentScore)?.toLowerCase()} outlook with a composite score of {sentimentScore}.
+              Key contributors include price and export strength.
             </p>
             <p style={{ fontSize: "0.95rem", lineHeight: "1.5" }}>
               With a score {Math.abs(sentimentScore - 70).toFixed(1)} points from the next trade trigger threshold,
-              traders may consider monitoring further shifts in positioning or technical momentum in the coming days.
+              traders may consider monitoring for further alignment before acting.
             </p>
             <div style={{ textAlign: "right", marginTop: "1.5rem" }}>
               <button
