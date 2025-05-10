@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import cornBanner from "./assets/corn.jpg";
 import soybeansBanner from "./assets/soybeans.jpg";
@@ -14,13 +14,6 @@ const cropImages = {
   Canola: canolaBanner,
 };
 
-const getScoreColor = (score) => {
-  if (score <= 33) return "#e74c3c"; // red
-  if (score >= 66) return "#2ecc71"; // green
-  return "#f1c40f"; // yellow
-};
-
-// ✅ FIXED: clean arc that ends exactly at needle without wrapping
 const describeArc = (x, y, radius, score) => {
   const clampedScore = Math.max(0, Math.min(score, 100));
   const angle = (Math.PI * clampedScore) / 100;
@@ -40,10 +33,7 @@ const getGradientColor = (score) => {
 const SentimentDashboard = () => {
   const [selectedCrop, setSelectedCrop] = useState("Corn");
   const [showModal, setShowModal] = useState(false);
-
-  const sentimentScore = 64;
-  const sentimentLabel =
-    sentimentScore >= 66 ? "Bullish" : sentimentScore <= 33 ? "Bearish" : "Neutral";
+  const [sentimentScore, setSentimentScore] = useState(null);
 
   const components = [
     { title: "Price Momentum", description: "Tracks recent price movement to measure short-term market direction.", score: 70.7 },
@@ -60,6 +50,17 @@ const SentimentDashboard = () => {
     return "Neutral";
   };
 
+  useEffect(() => {
+    fetch("https://harvestmarkets-api.onrender.com/api/latest-score")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.score !== undefined) {
+          setSentimentScore(data.score);
+        }
+      })
+      .catch(err => console.error("Failed to fetch score:", err));
+  }, []);
+
   return (
     <div style={{ fontFamily: "Arial, sans-serif", maxWidth: "1200px", margin: "0 auto", padding: "1rem" }}>
       {/* Banner */}
@@ -71,7 +72,7 @@ const SentimentDashboard = () => {
         />
       </div>
 
-      {/* Flex row: text left, gauge right */}
+      {/* Flex row */}
       <div style={{
         display: "flex",
         flexWrap: "wrap",
@@ -81,10 +82,10 @@ const SentimentDashboard = () => {
         marginTop: "1.25rem",
         marginBottom: "1.5rem"
       }}>
-        {/* Left: title + pills + description */}
+        {/* Left */}
         <div style={{ flex: "1 1 60%", minWidth: "300px" }}>
           <h1 style={{ fontSize: "1.8rem", fontWeight: "bold", marginBottom: "0.75rem" }}>
-            Ag Sentiment Index — April 13, 2025
+            Ag Sentiment Index
           </h1>
 
           <div style={{ marginBottom: "0.75rem" }}>
@@ -115,34 +116,37 @@ const SentimentDashboard = () => {
           </p>
         </div>
 
-        {/* Right: Gauge + Score + Button */}
+        {/* Gauge + Button */}
         <div style={{ flex: "1 1 35%", minWidth: "240px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <svg width="200" height="140">
-            {/* Gray arc */}
-            <path d="M20,120 A80,80 0 0,1 180,120" fill="none" stroke="#eee" strokeWidth="20" />
-            {/* Score arc */}
-            <path
-              d={describeArc(100, 120, 80, sentimentScore)}
-              fill="none"
-              stroke={getScoreColor(sentimentScore)}
-              strokeWidth="20"
-              strokeLinecap="round"
-            />
-            {/* Needle */}
-            <line
-              x1="100"
-              y1="120"
-              x2={100 + 70 * Math.cos((Math.PI * sentimentScore / 100) - Math.PI)}
-              y2={120 + 70 * Math.sin((Math.PI * sentimentScore / 100) - Math.PI)}
-              stroke="#333"
-              strokeWidth="4"
-            />
-            <circle cx="100" cy="120" r="5" fill="#333" />
-          </svg>
+          {sentimentScore !== null ? (
+            <>
+              <svg width="200" height="140">
+                <path d="M20,120 A80,80 0 0,1 180,120" fill="none" stroke="#eee" strokeWidth="20" />
+                <path
+                  d={describeArc(100, 120, 80, sentimentScore)}
+                  fill="none"
+                  stroke={getGradientColor(sentimentScore)}
+                  strokeWidth="20"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="100"
+                  y1="120"
+                  x2={100 + 70 * Math.cos((Math.PI * sentimentScore / 100) - Math.PI)}
+                  y2={120 + 70 * Math.sin((Math.PI * sentimentScore / 100) - Math.PI)}
+                  stroke="#333"
+                  strokeWidth="4"
+                />
+                <circle cx="100" cy="120" r="5" fill="#333" />
+              </svg>
 
-          <div style={{ fontWeight: "bold", textAlign: "center", marginBottom: "0.25rem" }}>
-            {sentimentScore.toFixed(2)} / 100 — {sentimentLabel}
-          </div>
+              <div style={{ fontWeight: "bold", textAlign: "center", marginBottom: "0.25rem" }}>
+                {sentimentScore.toFixed(2)} / 100 — {getLabel(sentimentScore)}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontWeight: "bold", padding: "2rem 0" }}>Loading score...</div>
+          )}
 
           <button
             onClick={() => setShowModal(true)}
@@ -211,7 +215,7 @@ const SentimentDashboard = () => {
           >
             <h2 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Market Sentiment Analysis</h2>
             <p style={{ fontSize: "0.95rem", marginBottom: "1rem", lineHeight: "1.5" }}>
-              Current conditions suggest a {sentimentLabel.toLowerCase()} outlook with a composite score of {sentimentScore}.
+              Current conditions suggest a {getLabel(sentimentScore).toLowerCase()} outlook with a composite score of {sentimentScore}.
               Key contributors include {components[0].title} and {components[4].title}, both indicating strong momentum and demand signals.
             </p>
             <p style={{ fontSize: "0.95rem", lineHeight: "1.5" }}>
